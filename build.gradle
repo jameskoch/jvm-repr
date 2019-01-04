@@ -1,15 +1,17 @@
-apply plugin: 'java'
-apply plugin: 'maven'
+// Loosely based on:
+// https://rishikeshdarandale.github.io/build/deploying-to-oss-sonatype-using-travis/
+// https://central.sonatype.org/pages/gradle.html#deploying-to-ossrh-with-gradle-introduction
 
-group = "jupyter"
-version = '0.2.1'
+plugins {
+  id 'net.researchgate.release' version '2.6.0'
+  id 'io.codearte.nexus-staging' version '0.12.0'
+  id 'java-library'
+  id 'maven'
+  id 'signing'
+}
 
 repositories {
   mavenCentral()
-}
-
-ext {
-  scalaVersion = '2.11'
 }
 
 sourceCompatibility = '1.7'
@@ -17,4 +19,72 @@ targetCompatibility = '1.7'
 
 dependencies {
   testCompile 'junit:junit:4.12'
+}
+
+task javadocJar(type: Jar) {
+  classifier = 'javadoc'
+  from javadoc
+}
+
+task sourcesJar(type: Jar) {
+  classifier = 'sources'
+  from sourceSets.main.allSource
+}
+
+artifacts {
+  archives javadocJar, sourcesJar
+}
+
+signing {
+  sign configurations.archives
+}
+
+def ossrhUsername="UNSET"
+def ossrhPassword="UNSET"
+
+if (project.hasProperty("ossrhUsername")) {
+  ossrhUsername = ossrhUsername
+}
+if (project.hasProperty("ossrhPassword")) {
+  ossrhPassword = ossrhPassword
+}
+
+uploadArchives {
+  repositories {
+    mavenDeployer {
+      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+        authentication(userName: ossrhUsername, password: ossrhPassword)
+      }
+
+      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+        authentication(userName: ossrhUsername, password: ossrhPassword)
+      }
+
+      pom.project {
+        name 'jvm-repr'
+        packaging 'jar'
+        description 'Shared Jupyter notebook representations and inspections across JVM kernels.'
+        url 'https://github.com/jameskoch/jvm-repr'
+        licenses {
+          license {
+              name 'BSD 3-Clause License'
+              url 'https://raw.githubusercontent.com/jameskoch/jvm-repr/master/LICENSE'
+          }
+        }
+        developers {
+          developer {
+              name 'Project Jupyter'
+              email 'jupyter@googlegroups.com'
+          }
+        }
+        scm {
+          connection = 'scm:git:git://github.com/jameskoch/jvm-repr.git'
+          developerConnection = 'scm:git:ssh://jameskoch/jvm-repr.git'
+          url = 'http://github.com/jameskoch/jvm-repr/tree/master'
+        }
+      }
+    }
+  }
 }
