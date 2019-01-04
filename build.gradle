@@ -1,15 +1,42 @@
-apply plugin: 'java'
-apply plugin: 'maven'
+plugins {
+  id "com.jfrog.bintray" version "1.7.3" // bintray test env only
+  id 'io.codearte.nexus-staging' version '0.12.0'
+  id 'java-library'
+  id 'maven'
+  id 'signing'
+}
 
-group = "jupyter"
-version = '0.2.1'
+group = 'org.jameskoch'
+archivesBaseName = 'jvm-repr'
+
+def computeVersion = { ->
+  def describe = { abbrev ->
+    def stdout = new ByteArrayOutputStream()
+	  exec {
+	  	if (abbrev) {
+	  		commandLine 'git', 'describe', '--tags'
+	  	} else {
+	  		commandLine 'git', 'describe', '--tags', '--abbrev=0'
+	  	}
+	    standardOutput = stdout
+	  }
+	  return stdout.toString().trim()
+	}
+	def mostRecentTag = describe(false)
+	def currentCommit = describe(true)
+	if (mostRecentTag == currentCommit) {
+		return mostRecentTag
+	} else {
+		return mostRecentTag + "-SNAPSHOT"
+	}
+}
+
+version = computeVersion()
+
 
 repositories {
   mavenCentral()
-}
-
-ext {
-  scalaVersion = '2.11'
+  jcenter() // bintray test only
 }
 
 sourceCompatibility = '1.7'
@@ -17,4 +44,78 @@ targetCompatibility = '1.7'
 
 dependencies {
   testCompile 'junit:junit:4.12'
+}
+
+///////////////////////////////////
+// Artifact building and signing
+javadoc.failOnError = false
+task javadocJar(type: Jar) {
+  classifier = 'javadoc'
+  from javadoc
+}
+
+task sourcesJar(type: Jar) {
+  classifier = 'sources'
+  from sourceSets.main.allSource
+}
+
+artifacts {
+  archives javadocJar, sourcesJar
+}
+
+signing {
+  sign configurations.archives
+}
+
+
+///////////////////////////////////
+// Artifact publishing:
+def ossrhUsername="UNSET"
+def ossrhPassword="UNSET"
+
+if (project.hasProperty("ossrhUsername")) {
+  ossrhUsername = ossrhUsername
+}
+if (project.hasProperty("ossrhPassword")) {
+  ossrhPassword = ossrhPassword
+}
+
+uploadArchives {
+  repositories {
+    mavenDeployer {
+      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+        authentication(userName: ossrhUsername, password: ossrhPassword)
+      }
+
+      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+        authentication(userName: ossrhUsername, password: ossrhPassword)
+      }
+
+      pom.project {
+        name 'jvm-repr'
+        packaging 'jar'
+        description 'Shared Jupyter notebook representations and inspections across JVM kernels.'
+        url 'https://github.com/jameskoch/jvm-repr'
+        licenses {
+          license {
+              name 'BSD 3-Clause License'
+              url 'https://raw.githubusercontent.com/jameskoch/jvm-repr/master/LICENSE'
+          }
+        }
+        developers {
+          developer {
+              name 'Project Jupyter'
+              email 'jupyter@googlegroups.com'
+          }
+        }
+        scm {
+          connection = 'scm:git:git://github.com/jameskoch/jvm-repr.git'
+          developerConnection = 'scm:git:ssh://jameskoch/jvm-repr.git'
+          url = 'http://github.com/jameskoch/jvm-repr/tree/master'
+        }
+      }
+    }
+  }
 }

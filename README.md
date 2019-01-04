@@ -1,7 +1,6 @@
 # JVM Repr
 
 [![Build Status](https://travis-ci.org/jupyter/jvm-repr.svg?branch=master)](https://travis-ci.org/jupyter/jvm-repr)
-[![JVM repr on jitpack](https://jitpack.io/v/jupyter/jvm-repr.svg)](https://jitpack.io/#jupyter/jvm-repr)
 
 [**Configuration**](#configuration) | [**Usage for Library Authors**](#usage---library-authors) | [**Usage for Kernel Authors**](#usage---kernel-authors)
 
@@ -23,6 +22,8 @@ the kernel that inspects the objects, and the frontends that display them.
 ## Configuration
 
 See [instructions on JitPack](https://jitpack.io/#jupyter/jvm-repr) for gradle, maven, sbt, or leiningen.
+
+TODO - Update for common langs
 
 ## Usage
 
